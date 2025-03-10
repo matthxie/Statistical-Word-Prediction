@@ -1,4 +1,4 @@
-from mc import NGramMarkovChain
+from models.n_gram_markov_chain import NGramMarkovChain
 from conversation_datasets.human_chat import HumanChat
 
 
