@@ -1,6 +1,8 @@
-class humanChat:
+class HumanChat:
     def __init__(self):
-        with open("raw_files/human_chat.txt", "r", encoding="utf-8") as f:
+        with open(
+            "conversation_datasets/raw_files/human_chat.txt", "r", encoding="utf-8"
+        ) as f:
             lines = f.readlines()
 
         # Remove "human 1:" and "human 2:"
@@ -17,7 +19,3 @@ class humanChat:
     def write_to_file(self, file_name):
         with open(file_name, "w", encoding="utf-8") as file:
             file.writelines(self.processed_lines)
-
-
-dataset = humanChat()
-dataset.write_to_file("cleaned_files/cleaned_human_chat.txt")
