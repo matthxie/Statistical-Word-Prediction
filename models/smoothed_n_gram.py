@@ -100,12 +100,14 @@ class NGramMarkovChain:
                 sentence = list(start_ngram)
             else:
                 sentence = list(start_words)
+
                 while len(sentence) < self.n:
                     random_start = random.choice(self.starting_ngrams)
                     sentence.append(random_start[len(sentence)])
         else:
             if len(start_words) > self.n:
                 start_words = start_words[-self.n :]
+
             sentence = list(start_words)
 
         for _ in range(max_length - len(sentence)):
@@ -127,15 +129,13 @@ class NGramMarkovChain:
             self.train(text)
             return True
         except Exception as e:
-            print(f"Error training on file: {e}")
+
             return False
 
 
 if __name__ == "__main__":
     model = NGramMarkovChain(n=3, alpha=0.0001)
     model.train_on_file("conversation_datasets/cleaned_files/cleaned_dailydialog.txt")
-
-    print()
 
     sentence = model.generate_sentence()
     print(sentence)
