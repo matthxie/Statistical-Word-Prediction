@@ -25,6 +25,7 @@ class NGramMarkovChain:
     def train(self, text):
         """Train the Markov chain on the provided text."""
         words = re.findall(r"\b\w+\b", text.lower())
+
         self.vocabulary.update(words)
 
         if len(words) < self.n + 1:
@@ -41,7 +42,7 @@ class NGramMarkovChain:
 
     def predict_next_word(self, context):
         """
-        Predict the next word given the context (last n words) using Laplace smoothing.
+        Predict the next word given the context (last n words) using only Laplace smoothing.
 
         Args:
             context: List or tuple of the last n words
@@ -55,38 +56,29 @@ class NGramMarkovChain:
         elif len(context) > self.n:
             context = context[-self.n :]
 
-        # Apply Laplace smoothing
-        if context in self.transitions:
-            word_counts = self.transitions[context]
-            total_count = sum(word_counts.values())
+        if context not in self.transitions:
+            if self.vocabulary:
+                return random.choice(list(self.vocabulary))
+            elif self.starting_ngrams:
+                random_start = random.choice(self.starting_ngrams)
+                return random_start[-1]
+            return None
 
-            probabilities = {}
+        word_counts = self.transitions[context]
+        total_count = sum(word_counts.values())
 
-            for word in self.vocabulary:
-                count = word_counts.get(word, 0)
+        probabilities = {}
 
-                probabilities[word] = (count + self.alpha) / (
-                    total_count + self.alpha * len(self.vocabulary)
-                )
+        for word in self.vocabulary:
+            count = word_counts.get(word, 0)
 
-            words = list(probabilities.keys())
-            probs = list(probabilities.values())
+            probabilities[word] = (count + self.alpha) / (
+                total_count + self.alpha * len(self.vocabulary)
+            )
 
-            return random.choices(words, weights=probs, k=1)[0]
-
-        else:
-            if self.n > 1 and len(context) > 1:
-                smaller_context = context[1:]
-                return self.predict_next_word(smaller_context)
-            else:
-                if self.vocabulary:
-                    return random.choice(list(self.vocabulary))
-
-                elif self.starting_ngrams:
-                    random_start = random.choice(self.starting_ngrams)
-                    return random_start[-1]
-
-                return None
+        words = list(probabilities.keys())
+        probs = list(probabilities.values())
+        return random.choices(words, weights=probs, k=1)[0]
 
     def generate_sentence(self, start_words=None, max_length=25):
         """
@@ -106,7 +98,6 @@ class NGramMarkovChain:
             if start_words is None:
                 start_ngram = random.choice(self.starting_ngrams)
                 sentence = list(start_ngram)
-
             else:
                 sentence = list(start_words)
 
@@ -136,23 +127,15 @@ class NGramMarkovChain:
             with open(file_path, "r", encoding="utf-8") as file:
                 text = file.read()
             self.train(text)
-
             return True
-
         except Exception as e:
-            print(f"Error training on file: {e}")
 
             return False
 
 
 if __name__ == "__main__":
-    model = NGramMarkovChain(n=4, alpha=0.1)  # Using a smaller alpha value
+    model = NGramMarkovChain(n=3, alpha=0.0001)
     model.train_on_file("conversation_datasets/cleaned_files/cleaned_dailydialog.txt")
-
-    sentence = model.generate_sentence(start_words=["hello", "how", "are"])
-    print(sentence)
-
-    print()
 
     sentence = model.generate_sentence()
     print(sentence)
