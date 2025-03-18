@@ -41,35 +41,38 @@ def calculate_top1_accuracy(reference_file, prediction_file):
     return accuracy
 
 def _get_probabilities(self, context):
+        """Calculate P(w | C) for each possible next word."""
         if context not in self.transition_counts:
             return {}
 
         total_count = sum(self.transition_counts[context].values())
         return {word: count / total_count for word, count in self.transition_counts[context].items()}
 
-    def compute_surprisal(self, context, word):
-        probabilities = self._get_probabilities(context)
-        if word in probabilities and probabilities[word] > 0:
-            return -math.log2(probabilities[word])
-        return float('inf')  
-    def compute_entropy(self, context):
-        probabilities = self._get_probabilities(context)
-        return -sum(p * math.log2(p) for p in probabilities.values() if p > 0)
+def compute_surprisal(self, context, word):
+    probabilities = self._get_probabilities(context)
+    if word in probabilities and probabilities[word] > 0:
+        return -math.log2(probabilities[word])
+    return float('inf')  # If the word never appeared, it's infinitely surprising
+
+def compute_entropy(self, context):
+    probabilities = self._get_probabilities(context)
+    return -sum(p * math.log2(p) for p in probabilities.values() if p > 0)
+
 def compute_perplexity(self, test_text):
-        words = test_text.lower().split()
-        ngrams = self._get_ngrams(words)
-        log_prob_sum = 0
-        n = len(ngrams)
+    words = test_text.lower().split()
+    ngrams = self._get_ngrams(words)
+    log_prob_sum = 0
+    n = len(ngrams)
 
-        for i in range(n - 1):
-            context = ngrams[i]
-            word = words[i + self.n]
-            word_probs = self.transitions[context]
+    for i in range(n - 1):
+        context = ngrams[i]
+        word = words[i + self.n]
+        word_probs = self.transitions[context]
 
-            vocab_size = len(set(word for counts in self.transitions.values() for word in counts))
-            total_count = self.total_counts[context] + self.alpha * vocab_size
-            prob = (word_probs.get(word, 0) + self.alpha) / total_count
+        vocab_size = len(set(word for counts in self.transitions.values() for word in counts))
+        total_count = self.total_counts[context] + self.alpha * vocab_size
+        prob = (word_probs.get(word, 0) + self.alpha) / total_count
 
-            log_prob_sum += math.log(prob)
+        log_prob_sum += math.log(prob)
 
-        return math.exp(-log_prob_sum / n) if n > 0 else float('inf')  
+    return math.exp(-log_prob_sum / n) if n > 0 else float('inf')  
