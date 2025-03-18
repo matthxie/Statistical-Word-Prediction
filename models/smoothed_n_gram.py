@@ -121,21 +121,24 @@ class NGramMarkovChain:
 
         return " ".join(sentence)
 
-    def train_on_file(self, file_path):
+    def train_on_files(self, file_paths):
         """Train the model on text from a file."""
-        try:
-            with open(file_path, "r", encoding="utf-8") as file:
-                text = file.read()
-            self.train(text)
-            return True
-        except Exception as e:
 
-            return False
+        for file_path in file_paths:
+            try:
+                with open(file_path, "r", encoding="utf-8") as file:
+                    text = file.read()
+                self.train(text)
+                return True
+            except Exception as e:
+                return False
 
 
 if __name__ == "__main__":
-    model = NGramMarkovChain(n=3, alpha=0.0001)
-    model.train_on_file("conversation_datasets/cleaned_files/cleaned_dailydialog.txt")
+    datasets = ["conversation_datasets/cleaned_files/cleaned_dailydialog.txt", \
+                "conversation_datasets/cleaned_files/cleaned_human_chat.txt"]
+    model = NGramMarkovChain(n=3, alpha=0.0)
+    model.train_on_files(datasets)
 
     sentence = model.generate_sentence()
     print(sentence)
