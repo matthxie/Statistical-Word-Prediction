@@ -1,166 +1,177 @@
-import math
-import numpy as np
-import re
-
-
-class MCModel:
+class NGramMCModel:
     def __init__(self):
         pass
 
-    def get_word_probability(self, context, next_word):
-        """
-        Calculate the probability of a word given a context using Laplace smoothing.
-
-        Args:
-            context: Tuple of context words
-            next_word: Word to calculate probability for
-
-        Returns:
-            float: Probability of the next word given the context
-        """
-        if context in self.transitions:
-            word_counts = self.transitions[context]
-            total_count = sum(word_counts.values())
-            count = word_counts.get(next_word, 0)
-
-            # Apply Laplace formula: (count + alpha) / (total_count + alpha * |V|)
-            return (count + self.alpha) / (
-                total_count + self.alpha * len(self.vocabulary)
-            )
-        else:
-            # Uniform probability for unseen contexts
-            return 1.0 / len(self.vocabulary) if self.vocabulary else 0.0
-
-    def calculate_surprisal(self, context, next_word):
-        """
-        Calculate surprisal (-log2(probability)) for a word given a context.
-
-        Args:
-            context: Tuple of context words
-            next_word: Word to calculate surprisal for
-
-        Returns:
-            float: Surprisal value in bits
-        """
-        prob = self.get_word_probability(context, next_word)
-        return -math.log2(prob) if prob > 0 else float("inf")
-
     def calculate_sentence_metrics(self, sentence):
         """
-        Calculate surprisal, entropy, and perplexity for a given sentence.
+        Calculate surprisal, entropy, and perplexity for a sentence.
 
         Args:
-            sentence: String or list of words to evaluate
+            sentence: Input sentence to evaluate
 
         Returns:
-            dict: Dictionary containing metrics
+            tuple: (average_surprisal, entropy, perplexity)
         """
-        if isinstance(sentence, str):
-            words = re.findall(r"\b\w+\b", sentence.lower())
-        else:
-            words = sentence
+        import math
+        import re
 
-        if len(words) <= self.n:
-            return {
-                "warning": f"Sentence too short for {self.n}-gram analysis",
-                "surprisals": [],
-                "entropy": float("nan"),
-                "perplexity": float("nan"),
-            }
+        # The issue is likely in the n-gram size; the debug output shows 8-grams
+        # but we should use the model's configured n value
+        n = self.n
+        words = re.findall(r"\b\w+\b", sentence.lower())
 
-        surprisals = []
-        word_probs = []
+        if len(words) <= n:
+            print(f"Warning: Sentence is too short for {n}-gram analysis")
+            return None, None, None
 
-        # For each possible context in the sentence
-        for i in range(len(words) - self.n):
-            context = tuple(words[i : i + self.n])
-            next_word = words[i + self.n]
+        total_log_prob = 0.0
+        word_count = 0
 
-            # Calculate probability and surprisal
-            prob = self.get_word_probability(context, next_word)
-            surprisal = -math.log2(prob) if prob > 0 else float("inf")
+        # Loop through each position where we can predict the next word
+        for i in range(len(words) - n):
+            context = tuple(words[i : i + n])
+            next_word = words[i + n]
 
-            surprisals.append(surprisal)
-            word_probs.append(prob)
+            # Check if we've seen this context before
+            if context in self.transitions:
+                # Get all possible next words for this context
+                possible_next_words = self.transitions[context]
+                total_transitions = len(possible_next_words)
 
-        # Calculate entropy and perplexity
-        if surprisals:
-            # Filter out infinite values for mean calculation
-            finite_surprisals = [s for s in surprisals if s != float("inf")]
-            if finite_surprisals:
-                entropy = np.mean(finite_surprisals)
-                perplexity = 2**entropy
+                # Count occurrences of the specific next word
+                next_word_count = possible_next_words.count(next_word)
+
+                # Calculate probability with smoothing
+                if next_word_count > 0:
+                    probability = next_word_count / total_transitions
+                else:
+                    # Apply Laplace smoothing
+                    # Get vocabulary size from all observed next words
+                    all_next_words = set()
+                    for words_list in self.transitions.values():
+                        all_next_words.update(words_list)
+                    vocab_size = len(all_next_words) or 1  # Avoid division by zero
+
+                    # Add 1 to count and add vocab size to denominator
+                    probability = 1 / (total_transitions + vocab_size)
             else:
-                entropy = float("inf")
-                perplexity = float("inf")
-        else:
-            entropy = float("nan")
-            perplexity = float("nan")
+                # If context not seen, use uniform distribution over vocabulary
+                all_next_words = set()
+                for words_list in self.transitions.values():
+                    all_next_words.update(words_list)
+                vocab_size = len(all_next_words) or 1  # Avoid division by zero
+                probability = 1 / vocab_size
 
-        return {
-            "surprisals": surprisals,
-            "word_probabilities": word_probs,
-            "entropy": entropy,
-            "perplexity": perplexity,
-        }
+            # Ensure minimum probability to avoid log(0)
+            probability = max(probability, 1e-10)
 
-    def evaluate_text(self, text, verbose=False):
+            # Calculate log probability (base 2 for bits)
+            log_prob = math.log2(probability)
+            total_log_prob += log_prob
+            word_count += 1
+
+        if word_count == 0:
+            print(f"Warning: No valid n-grams found in sentence")
+            return None, None, None
+
+        # Average negative log probability = surprisal
+        average_surprisal = -total_log_prob / word_count
+
+        # For n-gram models, entropy equals average surprisal in this calculation
+        entropy = average_surprisal
+
+        # Perplexity is 2^entropy
+        perplexity = 2**entropy
+
+        return average_surprisal, entropy, perplexity
+
+    def evaluate_corpus(self, text):
         """
-        Evaluate a multi-sentence text.
+        Evaluate a corpus of text containing multiple sentences.
 
         Args:
-            text: String containing multiple sentences to evaluate
-            verbose: Whether to print detailed metrics
+            text: Text containing multiple sentences separated by periods
 
         Returns:
-            dict: Dictionary containing average metrics
+            dict: Dictionary containing metrics for each sentence and overall averages
         """
-        # Split text into sentences (simple split by period for demonstration)
+        # Split text into sentences
         sentences = [s.strip() for s in text.split(".") if s.strip()]
 
-        all_surprisals = []
-        all_entropies = []
-        all_perplexities = []
-
-        for i, sentence in enumerate(sentences):
-            metrics = self.calculate_sentence_metrics(sentence)
-
-            if "warning" not in metrics:
-                all_surprisals.extend(metrics["surprisals"])
-
-                if not math.isnan(metrics["entropy"]) and metrics["entropy"] != float(
-                    "inf"
-                ):
-                    all_entropies.append(metrics["entropy"])
-
-                if not math.isnan(metrics["perplexity"]) and metrics[
-                    "perplexity"
-                ] != float("inf"):
-                    all_perplexities.append(metrics["perplexity"])
-
-                if verbose:
-                    print(f"\nSentence {i+1}: '{sentence}'")
-                    print(
-                        f"  Average Surprisal: {np.mean(metrics['surprisals']):.4f} bits"
-                    )
-                    print(f"  Entropy: {metrics['entropy']:.4f} bits")
-                    print(f"  Perplexity: {metrics['perplexity']:.4f}")
-
-        # Calculate averages
-        avg_metrics = {
-            "avg_surprisal": (
-                np.mean(all_surprisals) if all_surprisals else float("nan")
-            ),
-            "avg_entropy": np.mean(all_entropies) if all_entropies else float("nan"),
-            "avg_perplexity": (
-                np.mean(all_perplexities) if all_perplexities else float("nan")
-            ),
+        results = {
+            "sentences": [],
+            "overall": {
+                "average_surprisal": 0.0,
+                "average_entropy": 0.0,
+                "average_perplexity": 0.0,
+            },
         }
 
-        if verbose:
-            print("\nOverall Metrics:")
-            print(f"  Average Surprisal: {avg_metrics['avg_surprisal']:.4f} bits")
-            print(f"  Average Entropy: {avg_metrics['avg_entropy']:.4f} bits")
-            print(f"  Average Perplexity: {avg_metrics['avg_perplexity']:.4f}")
+        valid_sentence_count = 0
+        total_surprisal = 0.0
+        total_entropy = 0.0
+        total_perplexity = 0.0
 
-        return avg_metrics
+        # Process each sentence
+        for i, sentence in enumerate(sentences):
+
+            surprisal, entropy, perplexity = self.calculate_sentence_metrics(sentence)
+
+            if surprisal is not None:  # Only count valid sentences
+                sentence_result = {
+                    "text": sentence,
+                    "average_surprisal": surprisal,
+                    "entropy": entropy,
+                    "perplexity": perplexity,
+                }
+
+                results["sentences"].append(sentence_result)
+
+                total_surprisal += surprisal
+                total_entropy += entropy
+                total_perplexity += perplexity
+                valid_sentence_count += 1
+
+        # Calculate overall metrics
+        if valid_sentence_count > 0:
+            results["overall"]["average_surprisal"] = (
+                total_surprisal / valid_sentence_count
+            )
+            results["overall"]["average_entropy"] = total_entropy / valid_sentence_count
+            results["overall"]["average_perplexity"] = (
+                total_perplexity / valid_sentence_count
+            )
+
+        return results
+
+    def evaluate_text(self, text):
+        """
+        Evaluate and print results for a text corpus.
+
+        Args:
+            text: Text containing multiple sentences separated by periods
+        """
+        # First, verify the model has been trained
+        if not self.transitions:
+            print(
+                "Error: Model has not been trained. Please train the model before evaluation."
+            )
+            return
+
+        self.train(text)
+
+        results = self.evaluate_corpus(text)
+
+        print("\n----- Per-Sentence Metrics -----\n")
+        for i, sentence in enumerate(results["sentences"]):
+            print(f"Sentence {i+1}: '{sentence['text']}'")
+            print(f"  Average Surprisal: {sentence['average_surprisal']:.4f} bits")
+            print(f"  Entropy: {sentence['entropy']:.4f} bits")
+            print(f"  Perplexity: {sentence['perplexity']:.4f}")
+
+        print("\n----- Overall Metrics -----\n")
+        print(
+            f"  Average Surprisal: {results['overall']['average_surprisal']:.4f} bits"
+        )
+        print(f"  Average Entropy: {results['overall']['average_entropy']:.4f} bits")
+        print(f"  Average Perplexity: {results['overall']['average_perplexity']:.4f}")

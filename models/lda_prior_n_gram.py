@@ -1,7 +1,7 @@
 import numpy as np
 import random
 from lda import LDA_Gibbs, load_conversation_data
-from smoothed_n_gram import NGramMarkovChain
+from smoothed_n_gram import SmoothedNGramMC
 
 
 class LDA_NGramModel:
@@ -80,13 +80,13 @@ if __name__ == "__main__":
     file_path = "conversation_datasets/cleaned_files/cleaned_eli5_entries.txt"
     documents = load_conversation_data(file_path)
 
-    lda_model = LDA_Gibbs(n_topics=5, alpha=0.1, beta=0.1, n_iter=1)
+    lda_model = LDA_Gibbs(n_topics=5, alpha=0.000001, beta=0.000001, n_iter=1)
     lda_model.fit(documents)
 
     with open(file_path, "r", encoding="utf-8") as file:
         text_data = file.read()
 
-    ngram_model = NGramMarkovChain(n=3, alpha=0.01)
+    ngram_model = SmoothedNGramMC(n=3, alpha=0.01)
     ngram_model.train(text_data)
 
     combined_model = LDA_NGramModel(lda_model, ngram_model)

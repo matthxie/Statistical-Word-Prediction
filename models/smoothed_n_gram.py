@@ -1,10 +1,10 @@
-from models.mc_model import MCModel
+from models.smoothed_mc_model import SmoothedNGramMCModel
 import random
 import re
 from collections import defaultdict
 
 
-class SmoothedNGramMC(MCModel):
+class SmoothedNGramMC(SmoothedNGramMCModel):
     def __init__(self, n=2, alpha=1.0):
         """
         Initialize an n-gram Markov chain model with Laplace smoothing.

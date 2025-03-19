@@ -1,10 +1,10 @@
-from models.mc_model import MCModel
+from models.mc_model import NGramMCModel
 import random
 import re
 from collections import defaultdict
 
 
-class NGramMC(MCModel):
+class NGramMC(NGramMCModel):
     def __init__(self, n=2):
         """
         Initialize an n-gram Markov chain model.
@@ -15,7 +15,7 @@ class NGramMC(MCModel):
         self.n = n
         self.transitions = defaultdict(list)
         self.starting_ngrams = []
-        super(MCModel).__init__()
+        super(NGramMC).__init__()
 
     def _get_ngrams(self, words):
         """Generate n-grams from a list of words."""
@@ -119,7 +119,8 @@ class NGramMC(MCModel):
                 return False
 
     def evaluate_text(self, text, verbose=False):
-        return super(MCModel, self).evaluate_text(text, verbose)
+        return super(NGramMC, self).evaluate_text(text)
+        # return super(NGramMC, self).evaluate_metrics(text)
 
 
 if __name__ == "__main__":
