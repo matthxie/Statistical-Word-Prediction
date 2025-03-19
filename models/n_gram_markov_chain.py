@@ -1,9 +1,10 @@
+from models.mc_model import MCModel
 import random
 import re
 from collections import defaultdict
 
 
-class NGramMarkovChain:
+class NGramMC(MCModel):
     def __init__(self, n=2):
         """
         Initialize an n-gram Markov chain model.
@@ -14,6 +15,7 @@ class NGramMarkovChain:
         self.n = n
         self.transitions = defaultdict(list)
         self.starting_ngrams = []
+        super(MCModel).__init__()
 
     def _get_ngrams(self, words):
         """Generate n-grams from a list of words."""
@@ -116,6 +118,9 @@ class NGramMarkovChain:
                 print(f"Error training on file: {e}")
                 return False
 
+    def evaluate_text(self, text, verbose=False):
+        return super(MCModel, self).evaluate_text(text, verbose)
+
 
 if __name__ == "__main__":
     datasets = [
@@ -123,7 +128,7 @@ if __name__ == "__main__":
         "conversation_datasets/cleaned_files/cleaned_human_chat.txt",
         "conversation_datasets/cleaned_files/cleaned_eli5_entries.txt",
     ]
-    model = NGramMarkovChain(n=3)
+    model = NGramMC(n=3)
     model.train_on_files(datasets)
 
     sentence = model.generate_sentence()

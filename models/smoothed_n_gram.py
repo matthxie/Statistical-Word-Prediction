@@ -1,9 +1,10 @@
+from models.mc_model import MCModel
 import random
 import re
 from collections import defaultdict
 
 
-class NGramMarkovChain:
+class SmoothedNGramMC(MCModel):
     def __init__(self, n=2, alpha=1.0):
         """
         Initialize an n-gram Markov chain model with Laplace smoothing.
@@ -17,6 +18,7 @@ class NGramMarkovChain:
         self.transitions = defaultdict(lambda: defaultdict(int))
         self.starting_ngrams = []
         self.vocabulary = set()
+        super(SmoothedNGramMC).__init__()
 
     def _get_ngrams(self, words):
         """Generate n-grams from a list of words."""
@@ -133,6 +135,9 @@ class NGramMarkovChain:
             except Exception as e:
                 return False
 
+    def evaluate_text(self, text, verbose=False):
+        return super(SmoothedNGramMC, self).evaluate_text(text, verbose)
+
 
 if __name__ == "__main__":
     datasets = [
@@ -140,7 +145,7 @@ if __name__ == "__main__":
         "conversation_datasets/cleaned_files/cleaned_human_chat.txt",
         "conversation_datasets/cleaned_files/cleaned_eli5_entries.txt",
     ]
-    model = NGramMarkovChain(n=3, alpha=0.000001)
+    model = SmoothedNGramMC(n=3, alpha=0.000001)
     model.train_on_files(datasets)
 
     sentence = model.generate_sentence()

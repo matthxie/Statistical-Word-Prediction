@@ -1,9 +1,8 @@
 import nltk
-import math
 from nltk.translate.bleu_score import sentence_bleu
 from rouge_score import rouge_scorer
 
-nltk.download("punkt")
+nltk.download("punkt", quiet=True)
 
 
 def calculate_bleu(reference, prediction):
@@ -40,39 +39,32 @@ def calculate_top1_accuracy(reference_file, prediction_file):
     accuracy = correct_predictions / total_predictions if total_predictions > 0 else 0
     return accuracy
 
-def _get_probabilities(self, context):
-        """Calculate P(w | C) for each possible next word."""
-        if context not in self.transition_counts:
-            return {}
 
-        total_count = sum(self.transition_counts[context].values())
-        return {word: count / total_count for word, count in self.transition_counts[context].items()}
+if __name__ == "__main__":
+    from models.smoothed_n_gram import SmoothedNGramMC
+    from models.n_gram_markov_chain import NGramMC
 
-def compute_surprisal(self, context, word):
-    probabilities = self._get_probabilities(context)
-    if word in probabilities and probabilities[word] > 0:
-        return -math.log2(probabilities[word])
-    return float('inf')  # If the word never appeared, it's infinitely surprising
+    datasets = [
+        "conversation_datasets/cleaned_files/cleaned_dailydialog.txt",
+        "conversation_datasets/cleaned_files/cleaned_human_chat.txt",
+        "conversation_datasets/cleaned_files/cleaned_eli5_entries.txt",
+    ]
 
-def compute_entropy(self, context):
-    probabilities = self._get_probabilities(context)
-    return -sum(p * math.log2(p) for p in probabilities.values() if p > 0)
+    smoothed_mc = SmoothedNGramMC(n=3, alpha=0.000001)
+    n_gram_mc = NGramMC(n=3)
 
-def compute_perplexity(self, test_text):
-    words = test_text.lower().split()
-    ngrams = self._get_ngrams(words)
-    log_prob_sum = 0
-    n = len(ngrams)
+    smoothed_mc.train_on_files(datasets)
+    n_gram_mc.train_on_files(datasets)
 
-    for i in range(n - 1):
-        context = ngrams[i]
-        word = words[i + self.n]
-        word_probs = self.transitions[context]
+    smoothed_mc_sentences = ""
+    n_gram_mc_sentences = ""
 
-        vocab_size = len(set(word for counts in self.transitions.values() for word in counts))
-        total_count = self.total_counts[context] + self.alpha * vocab_size
-        prob = (word_probs.get(word, 0) + self.alpha) / total_count
+    for i in range(5):
+        smoothed_mc_sentences += smoothed_mc.generate_sentence() + "."
+        n_gram_mc_sentences += n_gram_mc.generate_sentence() + "."
 
-        log_prob_sum += math.log(prob)
+    smoothed_mc_metrics = smoothed_mc.evaluate_text(smoothed_mc_sentences, verbose=True)
+    n_gram_mc_metrics = smoothed_mc.evaluate_text(smoothed_mc_sentences, verbose=True)
 
-    return math.exp(-log_prob_sum / n) if n > 0 else float('inf')  
+    print(smoothed_mc_metrics, "\n\n")
+    print(n_gram_mc_metrics)
