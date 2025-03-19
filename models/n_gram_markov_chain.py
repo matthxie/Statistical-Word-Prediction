@@ -116,9 +116,13 @@ class NGramMarkovChain:
                 print(f"Error training on file: {e}")
                 return False
 
+
 if __name__ == "__main__":
-    datasets = ["conversation_datasets/cleaned_files/cleaned_dailydialog.txt", \
-                "conversation_datasets/cleaned_files/cleaned_human_chat.txt"]
+    datasets = [
+        "conversation_datasets/cleaned_files/cleaned_dailydialog.txt",
+        "conversation_datasets/cleaned_files/cleaned_human_chat.txt",
+        "conversation_datasets/cleaned_files/cleaned_eli5_entries.txt",
+    ]
     model = NGramMarkovChain(n=3)
     model.train_on_files(datasets)
 

@@ -135,10 +135,19 @@ class NGramMarkovChain:
 
 
 if __name__ == "__main__":
-    datasets = ["conversation_datasets/cleaned_files/cleaned_dailydialog.txt", \
-                "conversation_datasets/cleaned_files/cleaned_human_chat.txt"]
-    model = NGramMarkovChain(n=3, alpha=0.0)
+    datasets = [
+        "conversation_datasets/cleaned_files/cleaned_dailydialog.txt",
+        "conversation_datasets/cleaned_files/cleaned_human_chat.txt",
+        "conversation_datasets/cleaned_files/cleaned_eli5_entries.txt",
+    ]
+    model = NGramMarkovChain(n=3, alpha=0.000001)
     model.train_on_files(datasets)
 
     sentence = model.generate_sentence()
-    print(sentence)
+    print(sentence, "\n")
+
+    sentence = model.generate_sentence()
+    print(sentence, "\n")
+
+    sentence = model.generate_sentence()
+    print(sentence, "\n")
