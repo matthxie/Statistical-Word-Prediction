@@ -64,7 +64,9 @@ if __name__ == "__main__":
         n_gram_mc_sentences += n_gram_mc.generate_sentence() + "."
 
     smoothed_mc_metrics = smoothed_mc.evaluate_text(smoothed_mc_sentences, verbose=True)
-    n_gram_mc_metrics = smoothed_mc.evaluate_text(smoothed_mc_sentences, verbose=True)
+    print(smoothed_mc_metrics)
 
-    print(smoothed_mc_metrics, "\n\n")
+    print("\n\n\n ====================================== \n\n\n")
+
+    n_gram_mc_metrics = smoothed_mc.evaluate_text(smoothed_mc_sentences, verbose=True)
     print(n_gram_mc_metrics)
